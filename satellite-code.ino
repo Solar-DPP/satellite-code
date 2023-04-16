@@ -1,6 +1,14 @@
 #include <SPI.h>
 #include <SD.h>
 #include <GyverINA.h>
+#include <MCP3008.h>
+
+#define CS_PIN PB12
+#define CLOCK_PIN PB13
+#define MOSI_PIN PB15
+#define MISO_PIN PB14
+
+#define MOTOR_EN_PIN PB0
 
 const uint8_t adr1 = 0x41;
 const uint8_t adr2 = 0x44;
@@ -11,6 +19,8 @@ unsigned long tmr;
 
 INA219 ina1(adr1);
 INA219 ina2(adr2);
+MCP3008 adc(CLOCK_PIN, MOSI_PIN, MISO_PIN, CS_PIN);
+
 
 char *filename = "logs.txt";
 
@@ -118,8 +128,30 @@ void logger() {
 
   dtostrf(ina2.getVoltage(), 5, 3, v_stad);
   dtostrf(ina2.getCurrent(), 5, 3, a_stad);
-  
-  sprintf(msg, "%s;%s;%s;%s", v_lens, a_lens, v_stad, a_stad);
+
+  sprintf(msg, "%lu;%s;%s;%s;%s;%u;%u;%u;%u",
+          millis(),
+          v_lens, a_lens, v_stad, a_stad,
+          getLeft_t(), getLeft_b(), getRight_t(), getRight_b()
+         );
 
   log(msg);
+}
+
+
+int getLeft_t() {
+  return map(adc.readADC(0), 0, 1023, 0, 100);
+}
+
+
+int getLeft_b() {
+  return map(adc.readADC(3), 0, 1023, 0, 100);
+}
+
+int getRight_t() {
+  return map(adc.readADC(1), 0, 1023, 0, 100);
+}
+
+int getRight_b() {
+  return map(adc.readADC(2), 0, 1023, 0, 100);
 }
