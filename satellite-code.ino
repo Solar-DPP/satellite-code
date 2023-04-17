@@ -2,6 +2,9 @@
 #include <SD.h>
 #include <GyverINA.h>
 #include <MCP3008.h>
+#include <microDS18B20.h>
+
+#define DS_PIN PA0
 
 #define CS_PIN PB12
 #define CLOCK_PIN PB13
@@ -10,15 +13,23 @@
 
 #define MOTOR_EN_PIN PB0
 
+#define SD_PIN PA4
+
+uint8_t s1_addr[] = {0x28, 0xFF, 0xCD, 0x59, 0x51, 0x17, 0x4, 0xFE};
+uint8_t s2_addr[] = {0x28, 0xFF, 0x36, 0x94, 0x65, 0x15, 0x2, 0x80};
+
 const uint8_t adr1 = 0x41;
 const uint8_t adr2 = 0x44;
 
 unsigned long tmr;
 
-#define SD_PIN PA4
+
+MicroDS18B20<DS_PIN, s1_addr> sensor1;
+MicroDS18B20<DS_PIN, s2_addr> sensor2;
 
 INA219 ina1(adr1);
 INA219 ina2(adr2);
+
 MCP3008 adc(CLOCK_PIN, MOSI_PIN, MISO_PIN, CS_PIN);
 
 
@@ -36,7 +47,7 @@ void log(char *data) {
 
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(115200, SERIAL_8E1);
   SD.begin(SD_PIN);
 
   SD.remove(filename);
@@ -58,57 +69,12 @@ void setup() {
 }
 
 void loop() {
-  //  float voltage_lenses = ina1.getVoltage(); // TODO: add read INA219
-  //  float amperage_lenses = ina1.getCurrent(); // TODO: add read INA219
-  //
-  //  float voltage_standard = ina2.getVoltage(); // TODO: add read INA219
-  //  float amperage_standard = ina2.getCurrent(); // TODO: add read INA219
-  //
-  //  int x_position = 0; // TODO: add read position x
-  //  int y_position = 0; // TODO: add read position y
-  //
-  //  float li_top = 0.1;
-  //  float li_bottom = 0.2;
-  //  float li_left = 0.3;
-  //  float li_right = 0.4;
-  //
-  //
-  //
-  //  ultoa(millis(), message + strlen(message), DEC);
-  //  strcat(message, ";");
-  //
-  //  strcat(message, "wait");
-  //  strcat(message, ";");
-  //
-  //  dtostrf(voltage_lenses, 2, 3, message + strlen(message));
-  //  strcat(message, ";");
-  //  dtostrf(amperage_lenses, 2, 3, message + strlen(message));
-  //  strcat(message, ";");
-  //
-  //  dtostrf(voltage_standard, 2, 3, message + strlen(message));
-  //  strcat(message, ";");
-  //  dtostrf(amperage_standard, 2, 3, message + strlen(message));
-  //  strcat(message, ";");
-  //
-  //  itoa(x_position, message + strlen(message), DEC);
-  //  strcat(message, ";");
-  //  itoa(y_position, message + strlen(message), DEC);
-  //  strcat(message, ";");
-  //  char message[512] = "";
-  //
-  //  dtostrf(li_top, 2, 3, message + strlen(message));
-  //  strcat(message, ";");
-  //  dtostrf(li_bottom, 2, 3, message + strlen(message));
-  //  strcat(message, ";");
-  //  dtostrf(li_left, 2, 3, message + strlen(message));
-  //  strcat(message, ";");
-  //  dtostrf(li_right, 2, 3, message + strlen(message));
-  //
-  //  log(message);
-  //
   if (millis() - tmr > 1000) {
     tmr = millis();
     logger();
+
+    sensor1.requestTemp();
+    sensor2.requestTemp();
   }
 
 }
@@ -117,11 +83,14 @@ void loop() {
 void logger() {
   char msg[512];
 
-  char v_lens[6];
-  char a_lens[6];
+  char v_lens[5];
+  char a_lens[5];
 
-  char v_stad[6];
-  char a_stad[6];
+  char v_stad[5];
+  char a_stad[5];
+
+  char temp1[4];
+  char temp2[4];
 
   dtostrf(ina1.getVoltage(), 5, 3, v_lens);
   dtostrf(ina1.getCurrent(), 5, 3, a_lens);
@@ -129,10 +98,15 @@ void logger() {
   dtostrf(ina2.getVoltage(), 5, 3, v_stad);
   dtostrf(ina2.getCurrent(), 5, 3, a_stad);
 
-  sprintf(msg, "%lu;%s;%s;%s;%s;%u;%u;%u;%u",
+  if (sensor1.readTemp()) dtostrf(sensor1.getTemp(), 4, 2, temp1);
+  if (sensor2.readTemp()) dtostrf(sensor2.getTemp(), 4, 2, temp2);
+  
+
+  sprintf(msg, "%lu;%s;%s;%s;%s;%u;%u;%u;%u;%i;%i",
           millis(),
           v_lens, a_lens, v_stad, a_stad,
-          getLeft_t(), getLeft_b(), getRight_t(), getRight_b()
+          getLeft_t(), getLeft_b(), getRight_t(), getRight_b(),
+          temp1, temp2
          );
 
   log(msg);
