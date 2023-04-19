@@ -30,9 +30,12 @@ const uint8_t adr2 = 0x44;
 unsigned long tmr;
 unsigned long tmr1;
 
+char *filename = "logs.txt";
 
 bool ina1_work_flag = false;
 bool ina2_work_flag = false;
+
+uint8_t max_photores = 0;
 
 MicroDS18B20<DS_PIN, s1_addr> sensor1;
 MicroDS18B20<DS_PIN, s2_addr> sensor2;
@@ -45,9 +48,6 @@ MCP3008 adc(CLOCK_PIN, MOSI_PIN, MISO_PIN, CS_PIN);
 GStepper<STEPPER2WIRE> stepper1(1600, STEP_PIN1, DIR_PIN1, MOTOR_EN_PIN);
 GStepper<STEPPER2WIRE> stepper2(1600, STEP_PIN2, DIR_PIN2, MOTOR_EN_PIN);
 
-
-char *filename = "logs.txt";
-
 void log(char *data) {
   File sdFile = SD.open(filename, FILE_WRITE);
   if (sdFile) {
@@ -57,7 +57,6 @@ void log(char *data) {
 
   Serial.println(data);
 };
-
 
 void setup() {
   Serial.begin(115200, SERIAL_8E1);
@@ -85,39 +84,57 @@ void setup() {
   stepper2.setRunMode(FOLLOW_POS);
 
   stepper1.setAcceleration(0);
-  stepper1.setMaxSpeed(1000);
+  stepper1.setMaxSpeed(300);
   stepper1.enable();
+  
+  stepper2.setAcceleration(0);
+  stepper2.setMaxSpeed(300);
+  stepper2.enable();
 }
 
 void loop() {
   if (millis() - tmr > 1000) {
     tmr = millis();
     logger();
-    
+
     sensor1.requestTemp();
     sensor2.requestTemp();
 
   }
-  if (millis() - tmr1 > 10000) {
+  if (millis() - tmr1 > 15000) {
     tmr1 = millis();
-//    MovePanels();
+    calcChangeLight(getLeft_t());
+    calcChangeLight(getLeft_b());
 
+    calcChangeLight(getRight_t());
+    calcChangeLight(getRight_b());
   }
   stepper1.tick();
+  stepper2.tick();
+}
+
+void calcChangeLight(uint8_t sensor) {
+  if (abs(max_photores - sensor) >= 10) {
+    Serial.println(abs(max_photores - sensor));
+    MovePanels();
+  }
 }
 
 
 void logger() {
   char msg[512];
+  
+  uint8_t x = stepper1.getCurrent();
+  uint8_t y = stepper1.getCurrent();
+ 
+  char temp1[5] = "0.0";
+  char temp2[5] = "0.0";
 
-  char temp1[4];
-  char temp2[4];
+  char v_lens[5] = "0.0";
+  char a_lens[5] = "0.0";
 
-  char v_lens[5];
-  char a_lens[5];
-
-  char v_stad[5];
-  char a_stad[5];
+  char v_stad[5] = "0.0";
+  char a_stad[5] = "0.0";
 
 
   if (ina1_work_flag == true && ina2_work_flag == true) {
@@ -130,10 +147,10 @@ void logger() {
   if (sensor1.readTemp()) dtostrf(sensor1.getTemp(), 4, 2, temp1);
   if (sensor2.readTemp()) dtostrf(sensor2.getTemp(), 4, 2, temp2);
 
-
-  sprintf(msg, "%lu;%s;%s;%s;%s;%u;%u;%u;%u;%i;%i",
+  sprintf(msg, "%lu;%s;%s;%s;%s;%i;%i;%u;%u;%u;%u;%s;%s",
           millis(),
           v_lens, a_lens, v_stad, a_stad,
+          x, y,
           getLeft_t(), getLeft_b(), getRight_t(), getRight_b(),
           temp1, temp2
          );
@@ -171,32 +188,35 @@ void MovePanels() {
   uint8_t _matrix[4];
   getLightMatrix(_matrix);
   uint8_t num_photores;
-  uint8_t max_num = 0;
+  uint8_t max_photo = 0;
 
   float last_power = 0.0;
 
   for (int i = 0; i < 4; i++) {
-    if (_matrix[i] > max_num) {
-      max_num = _matrix[i];
+    if (_matrix[i] > max_photo) {
+      max_photo = _matrix[i];
       num_photores = i;
     }
   }
-  Serial.println(num_photores );
+  max_photores = max_photo;
+  Serial.println(num_photores);
+  Serial.println(ina1.getPower());
   if (num_photores == 0) {
     bool _f = false;
-    if (!stepper1.tick()) stepper1.setTarget(800, ABSOLUTE);
+    stepper1.setTarget(800, ABSOLUTE);
     stepper2.setTarget(-800, ABSOLUTE);
 
     while (!_f) {
       if (ina1.getPower() > last_power) {
         last_power = ina1.getPower();
-        if (!stepper1.tick()) stepper1.setTarget(800, RELATIVE);
+        stepper1.setTarget(800, RELATIVE);
         stepper2.setTarget(-800, RELATIVE);
       } else {
-        if (!stepper1.tick()) stepper1.setTarget(-800, RELATIVE);
+        stepper1.setTarget(-800, RELATIVE);
         stepper2.setTarget(800, RELATIVE);
         _f = true;
       }
+      delay(100);
     }
   }
   else if (num_photores == 1) {
@@ -205,16 +225,16 @@ void MovePanels() {
     stepper2.setTarget(800, ABSOLUTE);
 
     while (!_f) {
-      Serial.println(ina1.getPower());
       if (ina1.getPower() > last_power) {
         last_power = ina1.getPower();
-        if (!stepper1.tick()) stepper1.setTarget(800, RELATIVE);
+        stepper1.setTarget(800, RELATIVE);
         stepper2.setTarget(800, RELATIVE);
       } else {
-        if (!stepper1.tick()) stepper1.setTarget(-800, RELATIVE);
+        stepper1.setTarget(-800, RELATIVE);
         stepper2.setTarget(-800, RELATIVE);
         _f = true;
       }
+      delay(100);
     }
   }
   else if (num_photores == 2) {
@@ -225,13 +245,14 @@ void MovePanels() {
     while (!_f) {
       if (ina1.getPower() > last_power) {
         last_power = ina1.getPower();
-        if (!stepper1.tick()) stepper1.setTarget(-800, RELATIVE);
+        stepper1.setTarget(-800, RELATIVE);
         stepper2.setTarget(-800, RELATIVE);
       } else {
         stepper1.setTarget(800, RELATIVE);
         stepper2.setTarget(800, RELATIVE);
         _f = true;
       }
+      delay(100);
     }
   }
   else if (num_photores == 3) {
@@ -242,13 +263,14 @@ void MovePanels() {
     while (!_f) {
       if (ina1.getPower() > last_power) {
         last_power = ina1.getPower();
-        if (!stepper1.tick()) stepper1.setTarget(-800, RELATIVE);
+        stepper1.setTarget(-800, RELATIVE);
         stepper2.setTarget(800, RELATIVE);
       } else {
         stepper1.setTarget(800, RELATIVE);
         stepper2.setTarget(-800, RELATIVE);
         _f = true;
       }
+      delay(100);
     }
   }
 }
