@@ -275,20 +275,95 @@ void MovePanels() {
   }
 }
 
-//void algo(uint8_t x, uint8_t y) {
-//  bool _f = false;
-//  stepper1.setTarget(x, ABSOLUTE);
-//  stepper2.setTarget(y, ABSOLUTE);
-//
-//  while (!_f) {
-//    if (ina1.getPower() > last_power) {
-//      last_power = ina1.getPower();
-//      stepper1.setTarget(!x, RELATIVE);
-//      stepper2.setTarget(y, RELATIVE);
-//    } else {
-//      stepper1.setTarget(x, RELATIVE);
-//      stepper2.setTarget(!y, RELATIVE);
-//      _f = true;
-//    }
-//  }
-//}
+
+
+void MovePanels() {
+  uint8_t _matrix[4];
+  getLightMatrix(_matrix);
+  uint8_t num_photores;
+  uint8_t max_photo = 0;
+
+  float last_power = 0.0;
+
+  for (int i = 0; i < 4; i++) {
+    if (_matrix[i] > max_photo) {
+      max_photo = _matrix[i];
+      num_photores = i;
+    }
+  }
+  max_photores = max_photo;
+  Serial.println(num_photores);
+  Serial.println(ina1.getPower());
+  if (num_photores == 0) {
+    bool _f = false;
+    stepper1.setTarget(800, ABSOLUTE);
+    stepper2.setTarget(-800, ABSOLUTE);
+
+    while (!_f) {
+      if (ina1.getPower() > last_power) {
+        last_power = ina1.getPower();
+        stepper1.setTarget(800, RELATIVE);
+        stepper2.setTarget(-800, RELATIVE);
+      } else {
+        stepper1.setTarget(-800, RELATIVE);
+        stepper2.setTarget(800, RELATIVE);
+        _f = true;
+      }
+      delay(100);
+    }
+  }
+  else if (num_photores == 1) {
+    bool _f = false;
+    if (!stepper1.tick()) stepper1.setTarget(800, ABSOLUTE);
+    stepper2.setTarget(800, ABSOLUTE);
+
+    while (!_f) {
+      if (ina1.getPower() > last_power) {
+        last_power = ina1.getPower();
+        stepper1.setTarget(800, RELATIVE);
+        stepper2.setTarget(800, RELATIVE);
+      } else {
+        stepper1.setTarget(-800, RELATIVE);
+        stepper2.setTarget(-800, RELATIVE);
+        _f = true;
+      }
+      delay(100);
+    }
+  }
+  else if (num_photores == 2) {
+    bool _f = false;
+    if (!stepper1.tick()) stepper1.setTarget(-800, ABSOLUTE);
+    stepper2.setTarget(-800, ABSOLUTE);
+
+    while (!_f) {
+      if (ina1.getPower() > last_power) {
+        last_power = ina1.getPower();
+        stepper1.setTarget(-800, RELATIVE);
+        stepper2.setTarget(-800, RELATIVE);
+      } else {
+        stepper1.setTarget(800, RELATIVE);
+        stepper2.setTarget(800, RELATIVE);
+        _f = true;
+      }
+      delay(100);
+    }
+  }
+  else if (num_photores == 3) {
+    bool _f = false;
+    if (!stepper1.tick()) stepper1.setTarget(-800, ABSOLUTE);
+    stepper2.setTarget(800, ABSOLUTE);
+
+    while (!_f) {
+      if (ina1.getPower() > last_power) {
+        last_power = ina1.getPower();
+        stepper1.setTarget(-800, RELATIVE);
+        stepper2.setTarget(800, RELATIVE);
+      } else {
+        stepper1.setTarget(800, RELATIVE);
+        stepper2.setTarget(-800, RELATIVE);
+        _f = true;
+      }
+      delay(100);
+    }
+  }
+}
