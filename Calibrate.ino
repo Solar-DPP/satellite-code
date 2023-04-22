@@ -13,7 +13,6 @@ void calibrate() {
   unsigned long start_time = millis();
   digitalWrite(DIR_PIN1, 0);
   while (x_two.state() == true) {
-    x_two.state();
     digitalWrite(STEP_PIN1, 1);
     delay(speed_time);
     digitalWrite(STEP_PIN1, 0);
