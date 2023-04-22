@@ -21,6 +21,7 @@ enum MoveDirection {
 void movePanelsTo(MoveDirection direction);
 void stepMotor(uint8_t dir, uint8_t step_pin, uint8_t dir_pin);
 
+
 void initPanels() {
   pinMode(S_x_one_PIN, INPUT_PULLDOWN);
   pinMode(S_x_two_PIN, INPUT_PULLDOWN);
@@ -109,6 +110,7 @@ void updatePanelPosition() {
 
 
 void movePanelsTo(MoveDirection direction) {
+  mode_dir = direction;
   _moveToLeftTop();
   unsigned long start_time;
 
