@@ -1,3 +1,5 @@
+#include <EEPROM.h>
+
 #include <SPI.h>
 #include <SD.h>
 #include <GyverINA.h>
@@ -94,7 +96,11 @@ void setup() {
   pinMode(BATARY_HEAT_PIN, OUTPUT);
   Serial.begin(115200, SERIAL_8E1);
   sdcard_init = SD.begin(SD_PIN);
-  SD.remove(filename);
+
+  unsigned increment_sd;
+  EEPROM.get(0, increment_sd);
+  sprintf(filename, "log_%u.txt", increment_sd);
+  EEPROM.put(0, increment_sd + 1);
 
   if (ina1.begin()) {
     log("Ina1 0x41 begin");
