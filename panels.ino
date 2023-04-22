@@ -2,6 +2,7 @@
 #define LEFT 0
 #define DOWN 1
 #define UP 0
+#define DIFFERENCE_PRECENT 10
 
 enum MoveDirection {
   LEFT_TOP,
@@ -17,10 +18,11 @@ enum MoveDirection {
   RIGHT_BOTTOM,
 };
 
+MoveDirection currentDirection; 
+
 // a crutch for the arduino ide (see https://stackoverflow.com/questions/62683653/variable-or-field-declared-void-error-on-ardunio-compiler)
 void movePanelsTo(MoveDirection direction);
 void stepMotor(uint8_t dir, uint8_t step_pin, uint8_t dir_pin);
-
 
 void initPanels() {
   pinMode(S_x_one_PIN, INPUT_PULLDOWN);
@@ -49,60 +51,75 @@ void updatePanelPosition() {
   uint8_t _matrix[4];
   getLightMatrix(_matrix);
 
-  uint8_t num_photo_1 = 0;
+  uint8_t num_photo_1;
   uint8_t max_photo_1;
 
   uint8_t num_photo_2;
   uint8_t max_photo_2;
 
-  for (int i = 0; i < 4; i++) {
-    if (_matrix[i] > max_photo_1) {
-      max_photo_1 = _matrix[i];
-      num_photo_1 = i;
-    }
-  }
+  uint8_t num_photo_3;
+  uint8_t max_photo_3;
 
+  uint8_t num_photo_4;
+  uint8_t max_photo_4;
+
+
+  for (int i = 0; i < 4; i++) {
+    if (_matrix[i] > max_photo_1) { max_photo_1 = _matrix[i]; num_photo_1 = i; }
+  }
   _matrix[num_photo_1] = 0;
 
   for (int i = 0; i < 4; i++) {
-    if (_matrix[i] > max_photo_2) {
-      max_photo_2 = _matrix[i];
-      num_photo_2 = i;
-    }
+    if (_matrix[i] > max_photo_2) { max_photo_2 = _matrix[i]; num_photo_2 = i; }
   }
+  _matrix[num_photo_2] = 0;
 
-  uint8_t count = 0;
+  for (int i = 0; i < 4; i++) {
+    if (_matrix[i] > max_photo_3) { max_photo_3 = _matrix[i]; num_photo_3 = i; }
+  }
+  _matrix[num_photo_3] = 0;
 
-  if (max_photo_1 - max_photo_2 > 5) {
-    count = 1;
+  for (int i = 0; i < 4; i++) {
+    if (_matrix[i] > max_photo_4) { max_photo_4 = _matrix[i]; num_photo_4 = i; }
+  }
+  _matrix[num_photo_4] = 0;
+
+  if (max_photo_1 - max_photo_4 < DIFFERENCE_PRECENT) {
+    movePanelsTo(CENTER_CENTER);
   } else {
-    count = 2;
-  }
+    uint8_t count = 0;
 
-  if (count == 1) {
-    switch (num_photo_1) {
-      case 0:
-        movePanelsTo(RIGHT_BOTTOM);
-        break;
-      case 1:
-        movePanelsTo(RIGHT_TOP);
-        break;
-      case 2:
-        movePanelsTo(LEFT_BOTTOM);
-        break;
-      case 3:
-        movePanelsTo(LEFT_TOP);
-        break;
+    if (max_photo_1 - max_photo_2 > DIFFERENCE_PRECENT) {
+      count = 1;
+    } else {
+      count = 2;
     }
-  } else if (count == 2) {
-    if ((num_photo_1 == 0 && num_photo_2 == 1) || (num_photo_1 == 1 && num_photo_2 == 0)) {
-      movePanelsTo(RIGHT_CENTER);
-    } else if ((num_photo_1 == 0 && num_photo_2 == 2) || (num_photo_1 == 2 && num_photo_2 == 0)) {
-      movePanelsTo(CENTER_BOTTOM);
-    } else if ((num_photo_1 == 2 && num_photo_2 == 3) || (num_photo_1 == 3 && num_photo_2 == 2)) {
-      movePanelsTo(LEFT_CENTER);
-    } else if ((num_photo_1 == 3 && num_photo_2 == 1) || (num_photo_1 == 1 && num_photo_2 == 2)) {
-      movePanelsTo(CENTER_TOP);
+
+    if (count == 1) {
+      switch (num_photo_1) {
+        case 0:
+          movePanelsTo(RIGHT_BOTTOM);
+          break;
+        case 1:
+          movePanelsTo(RIGHT_TOP);
+          break;
+        case 2:
+          movePanelsTo(LEFT_BOTTOM);
+          break;
+        case 3:
+          movePanelsTo(LEFT_TOP);
+          break;
+      }
+    } else if (count == 2) {
+      if ((num_photo_1 == 0 && num_photo_2 == 1) || (num_photo_1 == 1 && num_photo_2 == 0)) {
+        movePanelsTo(RIGHT_CENTER);
+      } else if ((num_photo_1 == 0 && num_photo_2 == 2) || (num_photo_1 == 2 && num_photo_2 == 0)) {
+        movePanelsTo(CENTER_BOTTOM);
+      } else if ((num_photo_1 == 2 && num_photo_2 == 3) || (num_photo_1 == 3 && num_photo_2 == 2)) {
+        movePanelsTo(LEFT_CENTER);
+      } else if ((num_photo_1 == 3 && num_photo_2 == 1) || (num_photo_1 == 1 && num_photo_2 == 2)) {
+        movePanelsTo(CENTER_TOP);
+      }
     }
   }
 };
@@ -110,7 +127,8 @@ void updatePanelPosition() {
 
 
 void movePanelsTo(MoveDirection direction) {
-  mode_dir = direction;
+  currentDirection = direction;
+
   _moveToLeftTop();
   unsigned long start_time;
 

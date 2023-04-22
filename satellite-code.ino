@@ -7,7 +7,7 @@
 #include <microDS18B20.h>
 #include <EncButton.h>
 
-#define DS_PIN PB1
+#define DS_PIN PA0
 
 #define CS_PIN PB12
 #define CLOCK_PIN PB13
@@ -30,13 +30,16 @@
 
 #define SD_PIN PA4
 
-#define BATARY_HEAT_PIN PA0
+#define BATARY_HEAT_PIN PA1
 
+volatile bool s_x1 = false;
+volatile bool s_x2 = false;
 
-uint8_t mode_dir;
+volatile bool s_y1 = false;
+volatile bool s_y2 = false;
 
 uint8_t s1_addr[] = { 0x28, 0xFF, 0xCD, 0x59, 0x51, 0x17, 0x4, 0xFE };
-uint8_t s2_addr[] = { 0x28, 0x7c, 0xE2, 0x91, 0xC, 0x0, 0x0, 0x77};
+uint8_t s2_addr[] = { 0x28, 0xFF, 0x36, 0x94, 0x65, 0x15, 0x2, 0x80 };
 
 const uint8_t adr1 = 0x41;
 const uint8_t adr2 = 0x44;
@@ -117,7 +120,7 @@ void setup() {
   }
 
   initPanels();
-//  calibrate();/
+  calibrate();
 }
 
 void loop() {
