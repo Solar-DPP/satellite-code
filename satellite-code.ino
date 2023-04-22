@@ -13,12 +13,12 @@
 #define MISO_PIN PB14
 
 #define MOTOR_EN_PIN1 PB0
-#define DIR_PIN1   PA15
-#define STEP_PIN1  PA12
+#define DIR_PIN1 PA15
+#define STEP_PIN1 PA12
 
 #define MOTOR_EN_PIN2 PA1
-#define DIR_PIN2   PA11
-#define STEP_PIN2  PA8
+#define DIR_PIN2 PA11
+#define STEP_PIN2 PA8
 
 #define S_x_one_PIN PB11
 #define S_x_two_PIN PB4
@@ -36,8 +36,8 @@ volatile bool s_x2 = false;
 volatile bool s_y1 = false;
 volatile bool s_y2 = false;
 
-uint8_t s1_addr[] = {0x28, 0xFF, 0xCD, 0x59, 0x51, 0x17, 0x4, 0xFE};
-uint8_t s2_addr[] = {0x28, 0xFF, 0x36, 0x94, 0x65, 0x15, 0x2, 0x80};
+uint8_t s1_addr[] = { 0x28, 0xFF, 0xCD, 0x59, 0x51, 0x17, 0x4, 0xFE };
+uint8_t s2_addr[] = { 0x28, 0xFF, 0x36, 0x94, 0x65, 0x15, 0x2, 0x80 };
 
 const uint8_t adr1 = 0x41;
 const uint8_t adr2 = 0x44;
@@ -65,11 +65,11 @@ long y_interval = 0;
 
 bool sdcard_init = false;
 
-EncButton<EB_TICK, S_x_one_PIN> x_one;
-EncButton<EB_TICK, S_x_two_PIN> x_two;
+EncButton<EB_TICK, S_x_one_PIN> x_right_end;
+EncButton<EB_TICK, S_x_two_PIN> x_left_end;
 
-EncButton<EB_TICK, S_y_one_PIN> y_one;
-EncButton<EB_TICK, S_y_two_PIN> y_two;
+EncButton<EB_TICK, S_y_one_PIN> y_up_end;
+EncButton<EB_TICK, S_y_two_PIN> y_down_end;
 
 MicroDS18B20<DS_PIN, s1_addr> sensor1;
 MicroDS18B20<DS_PIN, s2_addr> sensor2;
@@ -99,18 +99,18 @@ void setup() {
   if (ina1.begin()) {
     log("Ina1 0x41 begin");
     ina1_work_flag = true;
-  }
-  else log("Ina1 0x41 failed");
+  } else log("Ina1 0x41 failed");
 
   if (ina2.begin()) {
     log("Ina2 0x44 begin");
     ina2_work_flag = true;
-  }
-  else log("Ina2 0x44 failed");
+  } else log("Ina2 0x44 failed");
 
   if (ina1_work_flag == true && ina2_work_flag == true) {
-    log("Ina1 0x41 Calibration value:"); log(ina1.getCalibration());
-    log("Ina2 0x44 Calibration value:"); log(ina2.getCalibration());
+    log("Ina1 0x41 Calibration value:");
+    log(ina1.getCalibration());
+    log("Ina2 0x44 Calibration value:");
+    log(ina2.getCalibration());
   }
 
   initPanels();
@@ -120,7 +120,7 @@ void setup() {
 void loop() {
   if (millis() - tmr > 1000) {
     tmr = millis();
-    logger();
+
 
     if (sensor2.getTemp() <= 15) {
       digitalWrite(BATARY_HEAT_PIN, 1);
@@ -130,27 +130,30 @@ void loop() {
 
     sensor1.requestTemp();
     sensor2.requestTemp();
-
   }
+
   if (millis() - tmr1 > 15000) {
     tmr1 = millis();
+
+    logger();
     calcChangeLight(getLeft_t());
     calcChangeLight(getLeft_b());
 
     calcChangeLight(getRight_t());
     calcChangeLight(getRight_b());
+
+    updatePanelPosition();
   }
 
-  x_one.tick();
-  x_two.tick();
-  y_one.tick();
-  y_two.tick();
+  x_right_end.tick();
+  x_left_end.tick();
+  y_up_end.tick();
+  y_down_end.tick();
 }
 
 void calcChangeLight(uint8_t sensor) {
   if (abs(max_photores - sensor) >= 10) {
     Serial.println(abs(max_photores - sensor));
-    //    MovePanels();/
   }
 }
 
@@ -158,7 +161,7 @@ void calcChangeLight(uint8_t sensor) {
 void logger() {
   char msg[512];
 
-  uint8_t x = 0;///
+  uint8_t x = 0;  ///
   uint8_t y = 0;
 
   char temp1[5] = "0.0";
@@ -187,8 +190,7 @@ void logger() {
           x, y,
           getLeft_t(), getLeft_b(), getRight_t(), getRight_b(),
           temp1, temp2,
-          sdcard_init
-         );
+          sdcard_init);
 
   log(msg);
 }
